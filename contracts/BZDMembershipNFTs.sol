@@ -5,6 +5,11 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+/**
+ * @title BZDMembershipNFTs
+ * @dev A contract for managing BuZhiDAO seasonal membership NFTs.
+ */
+
 contract BZDMembershipNFTs is ERC1155, Ownable {
     mapping(address => bool) public admins;
     uint256 adminCount;
@@ -18,30 +23,56 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         adminCount = 1;
     }
 
+    /**
+     * @dev Modifier to check that the caller is an admin.
+     */
     modifier onlyAdmin() {
         require(admins[msg.sender], "Only admins can perform this action");
         _;
     }
 
+    /**
+     * @dev Sets the base URI for token metadata.
+     * @param baseURI The new base URI.
+     */
     function setBaseURI(string memory baseURI) public onlyAdmin {
         _baseURI = baseURI;
     }
 
+    /**
+     * @dev Adds an admin to the contract.
+     * @param admin The address of the admin to add.
+     */
     function addAdmin(address admin) public onlyAdmin {
+        require(admins[admin] == false, "Address is already an admin");
         admins[admin] = true;
         adminCount = adminCount + 1;
     }
 
+    /**
+     * @dev Removes an admin from the contract.
+     * @param admin The address of the admin to remove.
+     */
     function removeAdmin(address admin) public onlyAdmin {
+        require(admins[admin] == true, "Address is not an admin");
         require(adminCount > 1, "Cannot remove last admin");
         admins[admin] = false;
         adminCount = adminCount - 1;
     }
 
+    /**
+     * @dev Sets the current season for minting.
+     * @param seasonId The ID of the current season.
+     */
     function setCurrentSeason(uint256 seasonId) public onlyAdmin {
         currentSeason = seasonId;
     }
 
+    /**
+     * @dev Mints membership NFTs to the specified addresses for the current season.
+     * @param recipients The addresses to mint membership NFTs to.
+     * @param seasonId The ID of the season to mint membership NFTs for.
+     */
     function mint(
         address[] calldata recipients,
         uint256 seasonId
@@ -57,6 +88,11 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         }
     }
 
+    /**
+     * @dev Burns the membership NFT for the specified address and season.
+     * @param account The address of the account to burn the membership NFT for.
+     * @param seasonId The ID of the season to burn the membership NFT for.
+     */
     function burn(address account, uint256 seasonId) public onlyAdmin {
         require(_exists(seasonId), "Invalid tokenId");
         require(
@@ -71,16 +107,27 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         }
     }
 
+    /**
+     * @dev Returns the URI for the specified token ID.
+     * @param tokenId The ID of the token to get the URI for.
+     */
     function uri(uint256 tokenId) public view override returns (string memory) {
         require(_exists(tokenId), "URI query for nonexistent token");
 
         return string(abi.encodePacked(_baseURI, Strings.toString(tokenId)));
     }
 
+    /**
+     * @dev Checks if the specified token ID exists.
+     * @param tokenId The ID of the token to check.
+     */
     function _exists(uint256 tokenId) internal view returns (bool) {
         return tokenId <= currentSeason;
     }
 
+    /**
+     * @dev Override for the ERC1155 `_beforeTokenTransfer` function to prevent transfers.
+     */
     function _beforeTokenTransfer(
         address operator,
         address from,
