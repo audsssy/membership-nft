@@ -15,6 +15,8 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
     uint256 adminCount;
     mapping(uint256 => mapping(address => bool)) public membersBySeason;
     mapping(uint256 => uint256) public memberCountBySeason;
+
+    // Starting season count at 1
     uint256 public currentSeason = 1;
     string private _baseURI;
 
@@ -80,11 +82,15 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         require(seasonId == currentSeason, "Season ID must be current season");
         for (uint256 i = 0; i < recipients.length; i++) {
             address recipient = recipients[i];
-
-            _mint(recipient, seasonId, 1, "");
-
-            membersBySeason[seasonId][recipient] = true;
-            memberCountBySeason[seasonId] = memberCountBySeason[seasonId] + 1;
+            // Only mint if the recipient does not already have a membership NFT for this season
+            // Silent fail otherwise for convenience
+            if (!membersBySeason[seasonId][recipient]) {
+                _mint(recipient, seasonId, 1, " ");
+                membersBySeason[seasonId][recipient] = true;
+                memberCountBySeason[seasonId] =
+                    memberCountBySeason[seasonId] +
+                    1;
+            }
         }
     }
 

@@ -1,17 +1,19 @@
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { BZDMembershipNFTs } from '../typechain';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 describe('BZDMembershipNFTs', () => {
   let nft: BZDMembershipNFTs;
-  let owner: any;
-  let admin: any;
-  let otherAdmin: any;
-  let member: any;
-  let otherMember: any;
+  let owner: SignerWithAddress;
+  let admin: SignerWithAddress;
+  let admin2: SignerWithAddress;
+  let admin3: SignerWithAddress;
+  let member: SignerWithAddress;
+  let otherMember: SignerWithAddress;
 
   beforeEach(async () => {
-    [owner, admin, otherAdmin, member, otherMember] =
+    [owner, admin, admin2, admin3, member, otherMember] =
       await ethers.getSigners();
 
     const BZDMembershipNFTs = await ethers.getContractFactory(
@@ -19,8 +21,8 @@ describe('BZDMembershipNFTs', () => {
     );
     nft = (await BZDMembershipNFTs.deploy()) as BZDMembershipNFTs;
     await nft.deployed();
-
     await nft.addAdmin(admin.address);
+
   });
 
   describe('admin restrictions', () => {
@@ -30,31 +32,34 @@ describe('BZDMembershipNFTs', () => {
       ).to.be.revertedWith('Only admins can perform this action');
 
       await expect(
-        nft.connect(otherAdmin).setBaseURI('https://example.com/')
+        nft.connect(admin).setBaseURI('https://example.com/')
       ).to.be.fulfilled;
     });
 
     it('allows only an admin to add another admin', async () => {
-      await expect(nft.connect(member).addAdmin(otherAdmin.address)).to.be
+      await expect(nft.connect(member).addAdmin(admin2.address)).to.be
         .reverted;
-
-      await expect(nft.connect(admin).addAdmin(otherAdmin.address)).to.be
+      await expect(nft.connect(admin).addAdmin(admin2.address)).to.be
+        .fulfilled;
+      await expect(nft.connect(admin2).addAdmin(admin3.address)).to.be
         .fulfilled;
 
-      expect(await nft.admins(otherAdmin.address)).to.be.true;
+      expect(await nft.admins(admin2.address)).to.be.true;
+      expect(await nft.admins(admin3.address)).to.be.true;
     });
 
     it('allows only an admin to remove another admin', async () => {
       await expect(nft.connect(member).removeAdmin(admin.address)).to.be
         .reverted;
-
-      await expect(nft.connect(admin).removeAdmin(admin.address)).to.be
+      await expect(nft.connect(admin).removeAdmin(admin3.address)).to.be
         .reverted;
-
-      await expect(nft.connect(admin).removeAdmin(otherAdmin.address)).to.be
+      await expect(nft.connect(admin2).removeAdmin(admin.address)).to.be
         .fulfilled;
 
-      expect(await nft.admins(otherAdmin.address)).to.be.false;
+      expect(await nft.admins(admin.address)).to.be.false;
+      expect(await nft.admins(admin2.address)).to.be.true;
+      expect(await nft.admins(admin3.address)).to.be.false;
+
     });
 
     it('allows only an admin to set the current season', async () => {
