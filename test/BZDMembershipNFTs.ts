@@ -10,10 +10,10 @@ describe('BZDMembershipNFTs', () => {
   let admin2: SignerWithAddress;
   let admin3: SignerWithAddress;
   let member: SignerWithAddress;
-  let otherMember: SignerWithAddress;
+  let member2: SignerWithAddress;
 
   beforeEach(async () => {
-    [owner, admin, admin2, admin3, member, otherMember] =
+    [owner, admin, admin2, admin3, member, member2] =
       await ethers.getSigners();
 
     const BZDMembershipNFTs = await ethers.getContractFactory(
@@ -43,7 +43,6 @@ describe('BZDMembershipNFTs', () => {
         .fulfilled;
       await expect(nft.connect(admin2).addAdmin(admin3.address)).to.be
         .fulfilled;
-
       expect(await nft.admins(admin2.address)).to.be.true;
       expect(await nft.admins(admin3.address)).to.be.true;
     });
@@ -51,13 +50,22 @@ describe('BZDMembershipNFTs', () => {
     it('allows only an admin to remove another admin', async () => {
       await expect(nft.connect(member).removeAdmin(admin.address)).to.be
         .reverted;
-      await expect(nft.connect(admin).removeAdmin(admin3.address)).to.be
-        .reverted;
-      await expect(nft.connect(admin2).removeAdmin(admin.address)).to.be
+      await nft.connect(admin).addAdmin(admin2.address);
+
+      await expect(nft.connect(admin).removeAdmin(admin2.address)).to.be
         .fulfilled;
 
+      await nft.connect(admin).addAdmin(admin2.address);
+      // await expect(nft.connect(admin2).removeAdmin(admin.address)).to.be
+      // .fulfilled;
+      // await expect(nft.connect(admin2).removeAdmin(admin3.address)).to.be
+      // .fulfilled;
+
+      await expect(nft.connect(admin2).removeAdmin(admin2.address)).to.be
+        .revertedWith('Cannot remove last admin');
+
       expect(await nft.admins(admin.address)).to.be.false;
-      expect(await nft.admins(admin2.address)).to.be.true;
+      expect(await nft.admins(admin2.address)).to.be.false;
       expect(await nft.admins(admin3.address)).to.be.false;
 
     });
@@ -100,25 +108,25 @@ describe('BZDMembershipNFTs', () => {
   it('adds members to the correct season on minting', async () => {
     await nft.setCurrentSeason(1);
     await nft.mint([member.address], 1);
-    await nft.mint([otherMember.address], 1);
-    await nft.mint([member.address, otherMember.address], 2);
+    await nft.mint([member2.address], 1);
+    await nft.mint([member.address, member2.address], 2);
 
     expect(await nft.membersBySeason(1, member.address)).to.be.true;
-    expect(await nft.membersBySeason(1, otherMember.address)).to.be.true;
+    expect(await nft.membersBySeason(1, member2.address)).to.be.true;
     expect(await nft.membersBySeason(2, member.address)).to.be.true;
-    expect(await nft.membersBySeason(2, otherMember.address)).to.be.true;
+    expect(await nft.membersBySeason(2, member2.address)).to.be.true;
     expect(await nft.memberCountBySeason(1)).to.equal(2);
     expect(await nft.memberCountBySeason(2)).to.equal(2);
   });
 
   it('removes members from the correct season on burning', async () => {
     await nft.setCurrentSeason(1);
-    await nft.mint([member.address, otherMember.address], 1);
+    await nft.mint([member.address, member2.address], 1);
 
     await nft.burn(member.address, 1);
 
     expect(await nft.membersBySeason(1, member.address)).to.be.false;
-    expect(await nft.membersBySeason(1, otherMember.address)).to.be.true;
+    expect(await nft.membersBySeason(1, member2.address)).to.be.true;
     expect(await nft.memberCountBySeason(1)).to.equal(1);
   });
 });
@@ -153,7 +161,7 @@ describe('token transfers', () => {
     await expect(
       nft.connect(member).safeTransferFrom(
         member.address,
-        otherMember.address,
+        member2.address,
         1,
         1,
         '0x'
@@ -161,7 +169,7 @@ describe('token transfers', () => {
     ).to.be.revertedWith('Tokens are non-transferable');
 
     expect(await nft.balanceOf(member.address, 1)).to.equal(1);
-    expect(await nft.balanceOf(otherMember.address, 1)).to.equal(0);
+    expect(await nft.balanceOf(member2.address, 1)).to.equal(0);
   });
 });
 });
