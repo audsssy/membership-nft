@@ -1,72 +1,3 @@
-# BZDMembershipDirectory
-
-This is a smart contract that manages a membership directory using a set-like data structure that's not natively supported in Solidity. The contract allows for adding and deleting members while being able to list all members.
-
-## Features
-
-- Member count tracking
-- Membership status tracking
-- Timestamp tracking for joining and removal of members
-- Access to each member by index
-- Access to all members in the set
-
-## Requirements
-
-- Solidity ^0.8.9
-- OpenZeppelin Contracts library
-
-## Installation
-
-Install the OpenZeppelin Contracts library:
-
-```
-npm install @openzeppelin/contracts
-```
-
-## Usage
-
-1. Inherit or initialize the `BZDMembershipDirectory` contract in your smart contract.
-2. Use the `addMember` and `removeMember` functions to manage the membership.
-3. Use the `memberByIndex` and `members` functions to access the members.
-
-## Functions
-
-### memberByIndex
-
-Access each member by index.
-
-```solidity
-function memberByIndex(uint256 index) public view returns (address)
-```
-
-### members
-
-Access all members in the set.
-
-```solidity
-function members() public view returns (address[] memory)
-```
-
-### addMember
-
-Add a member to the membership directory.
-
-```solidity
-function addMember(address member) public onlyOwner
-```
-
-### removeMember
-
-Remove a member from the membership directory.
-
-```solidity
-function removeMember(address member) public onlyOwner
-```
-
-## License
-
-This smart contract is released under the MIT License.
-
 # BZDMembershipNFTs
 
 This is a smart contract that manages BuZhiDAO seasonal membership NFTs using the ERC1155 standard. The contract is responsible for minting, burning, and managing membership tokens for each season.
@@ -168,3 +99,72 @@ function uri(uint256 tokenId) public view override returns (string memory)
 ## License
 
 This smart contract is released under the Unlicensed license.
+
+# BZDMembershipDirectory
+
+This is a smart contract that manages a membership directory using a set-like data structure that's not natively supported in Solidity. The contract allows for adding and deleting members while being able to list all members.
+
+## Features
+
+- Member count tracking
+- Membership status tracking
+- Timestamp tracking for joining and removal of members
+- Access to each member by index
+- Access to all members in the set
+
+## Requirements
+
+- Solidity ^0.8.9
+- OpenZeppelin Contracts library
+
+## Installation
+
+Install the OpenZeppelin Contracts library:
+
+```
+npm install @openzeppelin/contracts
+```
+
+## Usage
+
+1. Inherit or initialize the `BZDMembershipDirectory` contract in your smart contract.
+2. Use the `addMember` and `removeMember` functions to manage the membership.
+3. Use the `memberByIndex` and `members` functions to access the members.
+
+## Functions
+
+### memberByIndex
+
+Access each member by index.
+
+```solidity
+function memberByIndex(uint256 index) public view returns (address)
+```
+
+### members
+
+Access all members in the set.
+
+```solidity
+function members() public view returns (address[] memory)
+```
+
+### addMember
+
+Add a member to the membership directory.
+
+```solidity
+function addMember(address member) public onlyOwner
+```
+
+### removeMember
+
+Remove a member from the membership directory.
+
+```solidity
+function removeMember(address member) public onlyOwner
+```
+
+## License
+
+This smart contract is released under the MIT License.
