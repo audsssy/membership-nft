@@ -67,7 +67,7 @@ contract BZDMembershipDirectory is Ownable {
      * @dev Private function to add a member to this extension's member set data structures.
      * @param member address of the member to be added to the set
      */
-    function addMember(address member) public onlyOwner {
+    function addMember(address member) external onlyOwner {
         require(!isMember[member], "Member already exists");
         uint256 length = memberCount;
 
@@ -84,7 +84,7 @@ contract BZDMembershipDirectory is Ownable {
      * See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/extensions/ERC721Enumerable.sol#L134
      * @param member address of the member to be removed from the set
      */
-    function removeMember(address member) public onlyOwner {
+    function removeMember(address member) external onlyOwner {
         require(isMember[member], "Member does not exist");
         // To prevent a gap in the array, we store the last member in the index of the member to delete
         // then delete the last slot (swap and pop).

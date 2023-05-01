@@ -1,175 +1,226 @@
-import { ethers } from 'hardhat';
-import { expect } from 'chai';
-import { BZDMembershipNFTs } from '../typechain';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { ethers } from "hardhat";
+import { expect } from "chai";
+import { BZDMembershipNFTs } from "../typechain";
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'; 
 
-describe('BZDMembershipNFTs', () => {
-  let nft: BZDMembershipNFTs;
+describe("BZDMembershipNFTs", () => {
+  let contract: BZDMembershipNFTs;
   let owner: SignerWithAddress;
-  let admin: SignerWithAddress;
-  let admin2: SignerWithAddress;
-  let admin3: SignerWithAddress;
-  let member: SignerWithAddress;
-  let member2: SignerWithAddress;
-
+  let addr1: SignerWithAddress;
+  let addr2: SignerWithAddress;
+  let addr3: SignerWithAddress;
   beforeEach(async () => {
-    [owner, admin, admin2, admin3, member, member2] =
-      await ethers.getSigners();
+    [owner, addr1, addr2, addr3] = await ethers.getSigners();
+    const ContractFactory = await ethers.getContractFactory("BZDMembershipNFTs");
+    contract = (await ContractFactory.deploy()) as BZDMembershipNFTs;
+    await contract.deployed();
+  });
 
-    const BZDMembershipNFTs = await ethers.getContractFactory(
-      'BZDMembershipNFTs'
+  // Test 1: Successful deployment with correct initial state
+  it("Should successfully deploy with the correct initial state", async () => {
+    expect(await contract.currentSeason()).to.equal(1);
+    expect(await contract.adminsCount()).to.equal(1);
+  });
+
+  // Test 2: Adding and removing an admin
+  it("Should add and remove an admin", async () => {
+    await contract.addAdmin(addr1.address);
+    expect(await contract.adminsCount()).to.equal(2);
+
+    await contract.connect(addr1).removeAdmin(addr1.address);
+    expect(await contract.adminsCount()).to.equal(1);
+  });
+
+  // Test 3: Only admin can add or remove other admins
+  it("Should not allow non-admins to add or remove admins", async () => {
+    await contract.addAdmin(addr1.address);
+
+    await expect(contract.connect(addr2).addAdmin(addr2.address)).to.be.revertedWith(
+      "Only admins can perform this action"
     );
-    nft = (await BZDMembershipNFTs.deploy()) as BZDMembershipNFTs;
-    await nft.deployed();
-    await nft.addAdmin(admin.address);
-
-  });
-
-  describe('admin restrictions', () => {
-    it('allows only an admin to set the base URI', async () => {
-      await expect(
-        nft.connect(member).setBaseURI('https://example.com/')
-      ).to.be.revertedWith('Only admins can perform this action');
-
-      await expect(
-        nft.connect(admin).setBaseURI('https://example.com/')
-      ).to.be.fulfilled;
-    });
-
-    it('allows only an admin to add another admin', async () => {
-      await expect(nft.connect(member).addAdmin(admin2.address)).to.be
-        .reverted;
-      await expect(nft.connect(admin).addAdmin(admin2.address)).to.be
-        .fulfilled;
-      await expect(nft.connect(admin2).addAdmin(admin3.address)).to.be
-        .fulfilled;
-      expect(await nft.admins(admin2.address)).to.be.true;
-      expect(await nft.admins(admin3.address)).to.be.true;
-    });
-
-    it('allows only an admin to remove another admin', async () => {
-      await expect(nft.connect(member).removeAdmin(admin.address)).to.be
-        .reverted;
-      await nft.connect(admin).addAdmin(admin2.address);
-
-      await expect(nft.connect(admin).removeAdmin(admin2.address)).to.be
-        .fulfilled;
-
-      await nft.connect(admin).addAdmin(admin2.address);
-      // await expect(nft.connect(admin2).removeAdmin(admin.address)).to.be
-      // .fulfilled;
-      // await expect(nft.connect(admin2).removeAdmin(admin3.address)).to.be
-      // .fulfilled;
-
-      await expect(nft.connect(admin2).removeAdmin(admin2.address)).to.be
-        .revertedWith('Cannot remove last admin');
-
-      expect(await nft.admins(admin.address)).to.be.false;
-      expect(await nft.admins(admin2.address)).to.be.false;
-      expect(await nft.admins(admin3.address)).to.be.false;
-
-    });
-
-    it('allows only an admin to set the current season', async () => {
-      await expect(nft.connect(member).setCurrentSeason(2)).to.be.reverted;
-
-      await expect(nft.connect(admin).setCurrentSeason(2)).to.be.fulfilled;
-
-      expect(await nft.currentSeason()).to.equal(2);
-    });
-
-    it('allows only an admin to mint tokens', async () => {
-      await expect(
-        nft.connect(member).mint([member.address], 1)
-      ).to.be.revertedWith('Only admins can perform this action');
-
-      await expect(
-        nft.connect(admin).mint([member.address], 1)
-      ).to.be.fulfilled;
-
-      expect(await nft.balanceOf(member.address, 1)).to.equal(1);
-    });
-
-    it('allows only an admin to burn tokens', async () => {
-      await nft.setCurrentSeason(1);
-      await nft.mint([member.address], 1);
-
-      await expect(
-        nft.connect(member).burn(member.address, 1)
-      ).to.be.revertedWith('Only admins can perform this action');
-
-      await expect(nft.connect(admin).burn(member.address, 1)).to.be.fulfilled;
-
-      expect(await nft.balanceOf(member.address, 1)).to.equal(0);
-    });
-  });
-
-  describe('membership tracking', () =>{
-  it('adds members to the correct season on minting', async () => {
-    await nft.setCurrentSeason(1);
-    await nft.mint([member.address], 1);
-    await nft.mint([member2.address], 1);
-    await nft.mint([member.address, member2.address], 2);
-
-    expect(await nft.membersBySeason(1, member.address)).to.be.true;
-    expect(await nft.membersBySeason(1, member2.address)).to.be.true;
-    expect(await nft.membersBySeason(2, member.address)).to.be.true;
-    expect(await nft.membersBySeason(2, member2.address)).to.be.true;
-    expect(await nft.memberCountBySeason(1)).to.equal(2);
-    expect(await nft.memberCountBySeason(2)).to.equal(2);
-  });
-
-  it('removes members from the correct season on burning', async () => {
-    await nft.setCurrentSeason(1);
-    await nft.mint([member.address, member2.address], 1);
-
-    await nft.burn(member.address, 1);
-
-    expect(await nft.membersBySeason(1, member.address)).to.be.false;
-    expect(await nft.membersBySeason(1, member2.address)).to.be.true;
-    expect(await nft.memberCountBySeason(1)).to.equal(1);
-  });
-});
-
-describe('token metadata', () => {
-  beforeEach(async () => {
-    await nft.setBaseURI('https://example.com/');
-  });
-
-  it('returns the correct URI for a valid token ID', async () => {
-    await nft.setCurrentSeason(1);
-
-    const uri = await nft.uri(1);
-
-    expect(uri).to.equal('https://example.com/1');
-  });
-
-  it('reverts when querying the URI for an invalid token ID', async () => {
-    await nft.setCurrentSeason(1);
-
-    await expect(nft.uri(2)).to.be.revertedWith(
-      'URI query for nonexistent token'
+    await expect(contract.connect(addr2).removeAdmin(addr1.address)).to.be.revertedWith(
+      "Only admins can perform this action"
     );
   });
-});
 
-describe('token transfers', () => {
-  it('prevents transferring tokens between addresses', async () => {
-    await nft.setCurrentSeason(1);
-    await nft.mint([member.address], 1);
+  // Test 4: Setting base URI for token metadata
+  it("Should set the base URI for token metadata", async () => {
+    const newBaseURI = "https://example.com/metadata/";
+    await contract.setBaseURI(newBaseURI);
+    expect(await contract.uri(1)).to.equal(newBaseURI + "1");
+  });
+
+  // Test 5: Only admin can set base URI
+  it("Should not allow non-admins to set the base URI", async () => {
+    const newBaseURI = "https://example.com/metadata/";
+    await expect(contract.connect(addr1).setBaseURI(newBaseURI)).to.be.revertedWith(
+      "Only admins can perform this action"
+    );
+  });
+
+  // Test 6: Setting current season
+  it("Should set the current season", async () => {
+    const newSeason = 2;
+    await contract.setCurrentSeason(newSeason);
+    expect(await contract.currentSeason()).to.equal(newSeason);
+  });
+
+  // Test 7: Only admin can set current season
+  it("Should not allow non-admins to set the current season", async () => {
+    const newSeason = 2;
+    await expect(contract.connect(addr1).setCurrentSeason(newSeason)).to.be.revertedWith(
+      "Only admins can perform this action"
+    );
+  });
+
+  // Test 8: Minting membership NFTs and adding members to the season
+  it("Should mint membership NFTs and add members to the season", async () => {
+    const members = [addr1.address, addr2.address];
+    const seasonId = 1;
+
+        await contract.mintAndAddMembersToSeason(members, seasonId);
+
+        // Check if the membership NFTs were minted
+        expect(await contract.balanceOf(addr1.address, seasonId)).to.equal(1);
+        expect(await contract.balanceOf(addr2.address, seasonId)).to.equal(1);
+    
+        // Check if members were added to the season
+        const seasonMembers = await contract.membersForSeason(seasonId);
+        expect(seasonMembers).to.include.members(members);
+      });
+    
+      // Test 9: Only admin can mint membership NFTs
+      it("Should not allow non-admins to mint membership NFTs", async () => {
+        const members = [addr1.address, addr2.address];
+        const seasonId = 1;
+    
+        await expect(
+          contract.connect(addr1).mintAndAddMembersToSeason(members, seasonId)
+        ).to.be.revertedWith("Only admins can perform this action");
+      });
+    
+      // Test 10: Minting membership NFTs only for the current season
+      it("Should not allow minting membership NFTs for a non-current season", async () => {
+        const members = [addr1.address, addr2.address];
+        const seasonId = 2;
+    
+        await expect(contract.mintAndAddMembersToSeason(members, seasonId)).to.be.revertedWith(
+          "Season ID must be current season"
+        );
+      });
+    
+      // Test 11: Burning membership NFTs and removing members from the season
+      it("Should burn membership NFTs and remove members from the season", async () => {
+        const members = [addr1.address, addr2.address];
+        const seasonId = 1;
+    
+        // Mint NFTs and add members to the season
+        await contract.mintAndAddMembersToSeason(members, seasonId);
+    
+        // Burn NFTs and remove members from the season
+        await contract.burnAndRemoveMemberFromSeason(addr1.address, seasonId);
+        await contract.burnAndRemoveMemberFromSeason(addr2.address, seasonId);
+    
+        // Check if the membership NFTs were burned
+        expect(await contract.balanceOf(addr1.address, seasonId)).to.equal(0);
+        expect(await contract.balanceOf(addr2.address, seasonId)).to.equal(0);
+    
+        // Check if members were removed from the season
+        const seasonMembers = await contract.membersForSeason(seasonId);
+        expect(seasonMembers).to.not.include.members(members);
+      });
+    
+      // Test 12: Only admin can burn membership NFTs
+      it("Should not allow non-admins to burn membership NFTs", async () => {
+        const members = [addr1.address, addr2.address];
+        const seasonId = 1;
+    
+        // Mint NFTs and add members to the season
+        await contract.mintAndAddMembersToSeason(members, seasonId);
+    
+        await expect(
+          contract.connect(addr1).burnAndRemoveMemberFromSeason(addr1.address, seasonId)
+        ).to.be.revertedWith("Only admins can perform this action");
+      });
+    
+      // Test 13: Burning membership NFTs only for existing season members
+      it("Should not allow burning membership NFTs for non-season members", async () => {
+        const seasonId = 1;
+    
+        await expect(
+          contract.burnAndRemoveMemberFromSeason(addr1.address, seasonId)
+            // Test 13 continued: Burning membership NFTs only for existing season members
+    ).to.be.revertedWith("Account is not a member of this season");
+  });
+
+  // Test 14: Transferring membership NFTs should be prevented
+  it("Should prevent transferring membership NFTs", async () => {
+    const members = [addr1.address];
+    const seasonId = 1;
+
+    // Mint NFTs and add members to the season
+    await contract.mintAndAddMembersToSeason(members, seasonId);
 
     await expect(
-      nft.connect(member).safeTransferFrom(
-        member.address,
-        member2.address,
-        1,
-        1,
-        '0x'
-      )
-    ).to.be.revertedWith('Tokens are non-transferable');
-
-    expect(await nft.balanceOf(member.address, 1)).to.equal(1);
-    expect(await nft.balanceOf(member2.address, 1)).to.equal(0);
+      contract.connect(addr1).safeTransferFrom(addr1.address, addr2.address, seasonId, 1, [])
+    ).to.be.revertedWith("Tokens are non-transferable");
   });
+
+  // Test 15: Batch transferring membership NFTs should be prevented
+  it("Should prevent batch transferring membership NFTs", async () => {
+    const members = [addr1.address, addr2.address];
+    const seasonId = 1;
+
+    // Mint NFTs and add members to the season
+    await contract.mintAndAddMembersToSeason(members, seasonId);
+
+    await expect(
+      contract
+        .connect(addr1)
+        .safeBatchTransferFrom(
+          addr1.address,
+          addr2.address,
+          [seasonId, seasonId],
+          [1, 1],
+          []
+        )
+    ).to.be.revertedWith("Tokens are non-transferable");
+  });
+
+    // Test 16: Adding multiple admins
+    it("Should add multiple admins", async () => {
+      await contract.addAdmin(addr2.address);
+      await contract.addAdmin(addr3.address);
+  
+      const adminsDirectoryAddress = await contract.admins();
+      const adminsDirectory = await ethers.getContractAt("BZDMembershipDirectory", adminsDirectoryAddress);
+
+      expect(await adminsDirectory.memberCount()).to.equal(3);
+      expect(await adminsDirectory.isMember(addr2.address)).to.be.true;
+      expect(await adminsDirectory.isMember(addr3.address)).to.be.true;
+    });
+  
+    // Test 17: Newly added admin performing admin-only actions
+    it("Should allow newly added admin to perform admin-only actions", async () => {
+      // Add addr2 as admin
+      await contract.addAdmin(addr2.address);
+  
+      // Set new baseURI
+      const newBaseURI = "https://example.com/metadata/";
+      await contract.connect(addr2).setBaseURI(newBaseURI);
+      expect(await contract.uri(1)).to.equal(newBaseURI + "1");
+  
+      // // Set current season
+      const newSeason = 2;
+      await contract.connect(addr2).setCurrentSeason(newSeason);
+      expect(await contract.currentSeason()).to.equal(newSeason);
+  
+      // Mint NFTs for new season
+      const members = [addr1.address, addr3.address];
+      await contract.connect(addr2).mintAndAddMembersToSeason(members, newSeason);
+      expect(await contract.balanceOf(addr1.address, newSeason)).to.equal(1);
+      expect(await contract.membersBySeason(newSeason).isMember(addr1.address)).to.be.true;
+      expect(await contract.membersBySeason(newSeason).isMember(addr3.address)).to.be.true;
+    });  
 });
-});
+    

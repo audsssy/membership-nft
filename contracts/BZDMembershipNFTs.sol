@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
@@ -49,7 +50,7 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      * @dev Sets the base URI for token metadata.
      * @param baseURI The new base URI.
      */
-    function setBaseURI(string memory baseURI) public onlyAdmin {
+    function setBaseURI(string memory baseURI) external onlyAdmin {
         _baseURI = baseURI;
     }
 
@@ -59,7 +60,7 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      * @dev Adds an admin to the contract.
      * @param admin The address of the admin to add.
      */
-    function addAdmin(address admin) public onlyAdmin {
+    function addAdmin(address admin) external onlyAdmin {
         admins.addMember(admin);
     }
 
@@ -67,7 +68,7 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      * @dev Removes an admin from the contract.
      * @param admin The address of the admin to remove.
      */
-    function removeAdmin(address admin) public onlyAdmin {
+    function removeAdmin(address admin) external onlyAdmin {
         require(admins.memberCount() > 1, "Cannot remove last admin");
         admins.removeMember(admin);
     }
@@ -85,7 +86,7 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      * @dev Sets the current season.
      * @param seasonId The ID of the current season that starts from 1
      */
-    function setCurrentSeason(uint256 seasonId) public onlyAdmin {
+    function setCurrentSeason(uint256 seasonId) external onlyAdmin {
         currentSeason = seasonId;
     }
 
@@ -110,14 +111,14 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
     function mintAndAddMembersToSeason(
         address[] calldata members,
         uint256 seasonId
-    ) public onlyAdmin {
+    ) external onlyAdmin {
         require(seasonId == currentSeason, "Season ID must be current season");
         for (uint256 i = 0; i < members.length; i++) {
             address member = members[i];
             // Only mint if the recipient is not already a member of the season
             // Silent fail otherwise for convenience
             if (!membersBySeason[seasonId].isMember(member)) {
-                _mint(member, seasonId, 1, " ");
+                _mint(member, seasonId, 1, "");
                 membersBySeason[seasonId].addMember(member);
             }
         }
@@ -131,7 +132,7 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
     function burnAndRemoveMemberFromSeason(
         address member,
         uint256 seasonId
-    ) public onlyAdmin {
+    ) external onlyAdmin {
         require(
             membersBySeason[seasonId].isMember(member),
             "Account is not a member of this season"
