@@ -68,7 +68,7 @@ contract BZDIndexedMembershipNFTs is ERC1155, Ownable {
      * @param admin The address of the admin to remove.
      */
     function removeAdmin(address admin) public onlyAdmin {
-        require(admins.membersCount() > 1, "Cannot remove last admin");
+        require(admins.memberCount() > 1, "Cannot remove last admin");
         admins.removeMember(admin);
     }
 
@@ -76,7 +76,7 @@ contract BZDIndexedMembershipNFTs is ERC1155, Ownable {
      * @dev Returns the number of admins.
      */
     function adminsCount() public view returns (uint256) {
-        return admins.membersCount();
+        return admins.memberCount();
     }
 
     // Season Management //
@@ -104,51 +104,51 @@ contract BZDIndexedMembershipNFTs is ERC1155, Ownable {
 
     /**
      * @dev Mints membership NFTs to the specified addresses for the current season.
-     * @param recipients The addresses to mint membership NFTs to.
+     * @param members The addresses to mint membership NFTs to.
      * @param seasonId The ID of the season to mint membership NFTs for.
      */
     function mintAndAddMembersToSeason(
-        address[] calldata recipients,
+        address[] calldata members,
         uint256 seasonId
     ) public onlyAdmin {
         require(seasonId == currentSeason, "Season ID must be current season");
-        for (uint256 i = 0; i < recipients.length; i++) {
-            address recipient = recipients[i];
+        for (uint256 i = 0; i < members.length; i++) {
+            address member = members[i];
             // Only mint if the recipient is not already a member of the season
             // Silent fail otherwise for convenience
-            if (!membersBySeason[seasonId].isMember(recipient)) {
-                _mint(recipient, seasonId, 1, " ");
-                membersBySeason[seasonId].addMember(recipient);
+            if (!membersBySeason[seasonId].isMember(member)) {
+                _mint(member, seasonId, 1, " ");
+                membersBySeason[seasonId].addMember(member);
             }
         }
     }
 
     /**
      * @dev Burns the membership NFT for the specified address and season.
-     * @param account The address of the account to burn the membership NFT for.
+     * @param member The address of the account to burn the membership NFT for.
      * @param seasonId The ID of the season to burn the membership NFT for.
      */
     function burnAndRemoveMemberFromSeason(
-        address account,
+        address member,
         uint256 seasonId
     ) public onlyAdmin {
         require(
-            membersBySeason[seasonId].isMember(account),
+            membersBySeason[seasonId].isMember(member),
             "Account is not a member of this season"
         );
         require(
             membersBySeason[seasonId].membersCount() > 0,
             "No members this season to burn"
         );
-        _burn(account, seasonId, 1);
-        membersBySeason[seasonId].removeMember(account);
+        _burn(member, seasonId, 1);
+        membersBySeason[seasonId].removeMember(member);
     }
 
     // Metadata //
 
     /**
      * @dev Returns the URI for the specified token ID.
-     * @param tokenId The ID of the token to get the URI for.
+     * @param tokenId The ID of the token to get the URI for, refers to seasonId here
      */
     function uri(uint256 tokenId) public view override returns (string memory) {
         return string(abi.encodePacked(_baseURI, Strings.toString(tokenId)));

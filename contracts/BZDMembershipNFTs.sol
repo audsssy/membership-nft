@@ -100,7 +100,7 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      * @param account The address of the account to burn the membership NFT for.
      * @param seasonId The ID of the season to burn the membership NFT for.
      */
-    function burn(address account, uint256 seasonId) public onlyAdmin {
+    function burn(address member, uint256 seasonId) public onlyAdmin {
         require(_exists(seasonId), "Invalid tokenId");
         require(
             membersBySeason[seasonId][account],
