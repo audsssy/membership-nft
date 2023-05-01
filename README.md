@@ -102,7 +102,7 @@ This smart contract is released under the Unlicensed license.
 
 # BZDMembershipDirectory
 
-This is a smart contract that manages a membership directory using a set-like data structure that's not natively supported in Solidity. The contract allows for adding and deleting members while being able to list all members.
+This is a smart contract that manages a membership directory using a set-like data structure that's not natively supported in Solidity. The contract allows for adding and deleting members while being able to list all members. And is used for both members and admins in the above membership NFT contract
 
 ## Features
 
