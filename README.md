@@ -1,126 +1,170 @@
-Sure thing! Here's the documentation in Markdown format:
+# BZDMembershipDirectory
 
-## `BZDMembershipNFTs`
+This is a smart contract that manages a membership directory using a set-like data structure that's not natively supported in Solidity. The contract allows for adding and deleting members while being able to list all members.
 
-A contract for managing BuZhiDAO seasonal membership NFTs using the ERC1155 standard.
+## Features
 
-### `admins`
+- Member count tracking
+- Membership status tracking
+- Timestamp tracking for joining and removal of members
+- Access to each member by index
+- Access to all members in the set
 
-```solidity
-mapping(address => bool) public admins
+## Requirements
+
+- Solidity ^0.8.9
+- OpenZeppelin Contracts library
+
+## Installation
+
+Install the OpenZeppelin Contracts library:
+
+```
+npm install @openzeppelin/contracts
 ```
 
-A mapping of admin addresses to a boolean indicating whether they are currently an admin.
+## Usage
 
-### `membersBySeason`
+1. Inherit or initialize the `BZDMembershipDirectory` contract in your smart contract.
+2. Use the `addMember` and `removeMember` functions to manage the membership.
+3. Use the `memberByIndex` and `members` functions to access the members.
 
-```solidity
-mapping(uint256 => mapping(address => bool)) public membersBySeason
-```
+## Functions
 
-A nested mapping of season IDs to a mapping of member addresses to a boolean indicating whether they are a member of the given season.
+### memberByIndex
 
-### `memberCountBySeason`
-
-```solidity
-mapping(uint256 => uint256) public memberCountBySeason
-```
-
-A mapping of season IDs to the number of members in the given season.
-
-### `currentSeason`
+Access each member by index.
 
 ```solidity
-uint256 public currentSeason
+function memberByIndex(uint256 index) public view returns (address)
 ```
 
-The ID of the current season.
+### members
 
-### `_baseURI`
+Access all members in the set.
 
 ```solidity
-string private _baseURI
+function members() public view returns (address[] memory)
 ```
 
-The base URI for the token metadata.
+### addMember
 
-### `constructor()`
-
-The constructor function for the contract. Sets the contract name and initializes the sender as an admin.
-
-### `onlyAdmin`
-
-A modifier function that restricts a function to be callable only by an admin.
-
-### `setBaseURI`
+Add a member to the membership directory.
 
 ```solidity
-function setBaseURI(string memory baseURI) public onlyAdmin
+function addMember(address member) public onlyOwner
 ```
 
-Sets the base URI for the token metadata.
+### removeMember
 
-### `addAdmin`
+Remove a member from the membership directory.
+
+```solidity
+function removeMember(address member) public onlyOwner
+```
+
+## License
+
+This smart contract is released under the MIT License.
+
+# BZDMembershipNFTs
+
+This is a smart contract that manages BuZhiDAO seasonal membership NFTs using the ERC1155 standard. The contract is responsible for minting, burning, and managing membership tokens for each season.
+
+## Features
+
+- Admin management
+- Season management
+- Member management
+- Metadata management
+- Non-transferable membership tokens
+
+## Requirements
+
+- Solidity ^0.8.9
+- OpenZeppelin Contracts library
+
+## Installation
+
+Install the OpenZeppelin Contracts library:
+
+```
+npm install @openzeppelin/contracts
+```
+
+## Usage
+
+1. Deploy the `BZDMembershipNFTs` contract.
+2. Use admin management functions to add or remove admins.
+3. Use season management functions to set the current season.
+4. Use member management functions to mint and burn membership tokens for each season.
+
+## Functions
+
+### addAdmin
+
+Add an admin to the contract.
 
 ```solidity
 function addAdmin(address admin) public onlyAdmin
 ```
 
-Adds a new admin to the contract.
+### removeAdmin
 
-### `removeAdmin`
+Remove an admin from the contract.
 
 ```solidity
 function removeAdmin(address admin) public onlyAdmin
 ```
 
-Removes an admin from the contract.
+### adminsCount
 
-### `setCurrentSeason`
+Returns the number of admins.
+
+```solidity
+function adminsCount() public view returns (uint256)
+```
+
+### setCurrentSeason
+
+Set the current season.
 
 ```solidity
 function setCurrentSeason(uint256 seasonId) public onlyAdmin
 ```
 
-Sets the ID of the current season.
+### membersForSeason
 
-### `mint`
-
-```solidity
-function mint(address[] calldata recipients, uint256 seasonId) public onlyAdmin
-```
-
-Mints a new membership NFT for each recipient in the list, for the current season.
-
-### `burn`
+Returns the number of members for the season.
 
 ```solidity
-function burn(address account, uint256 seasonId) public onlyAdmin
+function membersForSeason(uint256 seasonId) public view returns (address[] memory)
 ```
 
-Burns the membership NFT of the given account for the given season.
+### mintAndAddMembersToSeason
 
-### `uri`
+Mints membership NFTs to the specified addresses for the current season.
+
+```solidity
+function mintAndAddMembersToSeason(address[] calldata members, uint256 seasonId) public onlyAdmin
+```
+
+### burnAndRemoveMemberFromSeason
+
+Burns the membership NFT for the specified address and season.
+
+```solidity
+function burnAndRemoveMemberFromSeason(address member, uint256 seasonId) public onlyAdmin
+```
+
+### uri
+
+Returns the URI for the specified token ID.
 
 ```solidity
 function uri(uint256 tokenId) public view override returns (string memory)
 ```
 
-Returns the URI for the token metadata of the given token ID.
+## License
 
-### `_exists`
-
-```solidity
-function _exists(uint256 tokenId) internal view returns (bool)
-```
-
-Returns a boolean indicating whether the given token ID exists.
-
-### `_beforeTokenTransfer`
-
-A hook function that is called before any token transfer operation. This function prevents transferring tokens between addresses.
-
-## References:
-
-- [OpenZeppelin Contracts](https://docs.openzeppelin.com/contracts/)
-- [Ethereum Improvement Proposal: ERC-1155 Multi Token Standard](https://eips.ethereum.org/EIPS/eip-1155)
+This smart contract is released under the Unlicensed license.
