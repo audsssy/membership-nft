@@ -98,7 +98,7 @@ function uri(uint256 tokenId) public view override returns (string memory)
 
 ## License
 
-This smart contract is released under the Unlicensed license.
+This smart contract is released under the MIT License.
 
 # BZDMembershipDirectory
 
