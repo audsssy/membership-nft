@@ -137,7 +137,7 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
             "Account is not a member of this season"
         );
         require(
-            membersBySeason[seasonId].membersCount() > 0,
+            membersBySeason[seasonId].memberCount() > 0,
             "No members this season to burn"
         );
         _burn(member, seasonId, 1);
