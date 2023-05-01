@@ -211,16 +211,20 @@ describe("BZDMembershipNFTs", () => {
       expect(await contract.uri(1)).to.equal(newBaseURI + "1");
   
       // // Set current season
-      const newSeason = 2;
+      const newSeason = 1;
       await contract.connect(addr2).setCurrentSeason(newSeason);
       expect(await contract.currentSeason()).to.equal(newSeason);
   
       // Mint NFTs for new season
       const members = [addr1.address, addr3.address];
-      await contract.connect(addr2).mintAndAddMembersToSeason(members, newSeason);
+      await contract.mintAndAddMembersToSeason(members, newSeason);
+
+      const memberDirectoryAddress = await contract.membersBySeason(newSeason);
+      const memberDirectory = await ethers.getContractAt("BZDMembershipDirectory", memberDirectoryAddress);
+
       expect(await contract.balanceOf(addr1.address, newSeason)).to.equal(1);
-      expect(await contract.membersBySeason(newSeason).isMember(addr1.address)).to.be.true;
-      expect(await contract.membersBySeason(newSeason).isMember(addr3.address)).to.be.true;
+      expect(await memberDirectory.isMember(addr1.address)).to.be.true;
+      expect(await memberDirectory.isMember(addr3.address)).to.be.true;
     });  
 });
     
