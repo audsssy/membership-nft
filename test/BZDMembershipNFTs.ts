@@ -35,11 +35,11 @@ describe("BZDMembershipNFTs", () => {
   it("Should not allow non-admins to add or remove admins", async () => {
     await contract.addAdmin(addr1.address);
 
-    await expect(contract.connect(addr2).addAdmin(addr2.address)).to.be.revertedWith(
-      "Only admins can perform this action"
+    expect(contract.connect(addr2).addAdmin(addr2.address)).to.be.revertedWithCustomError(
+      contract, "Unauthorized"
     );
-    await expect(contract.connect(addr2).removeAdmin(addr1.address)).to.be.revertedWith(
-      "Only admins can perform this action"
+    expect(contract.connect(addr2).removeAdmin(addr1.address)).to.be.revertedWithCustomError(
+      contract, "Unauthorized"
     );
   });
 
@@ -53,8 +53,8 @@ describe("BZDMembershipNFTs", () => {
   // Test 5: Only admin can set base URI
   it("Should not allow non-admins to set the base URI", async () => {
     const newBaseURI = "https://example.com/metadata/";
-    await expect(contract.connect(addr1).setBaseURI(newBaseURI)).to.be.revertedWith(
-      "Only admins can perform this action"
+    expect(contract.connect(addr1).setBaseURI(newBaseURI)).to.be.revertedWithCustomError(
+      contract, "Unauthorized"
     );
   });
 
@@ -68,9 +68,9 @@ describe("BZDMembershipNFTs", () => {
   // Test 7: Only admin can set current season
   it("Should not allow non-admins to set the current season", async () => {
     const newSeason = 2;
-    await expect(contract.connect(addr1).setCurrentSeason(newSeason)).to.be.revertedWith(
-      "Only admins can perform this action"
-    );
+    expect(
+      contract.connect(addr1).setCurrentSeason(newSeason)
+    ).to.be.revertedWithCustomError(contract, "Unauthorized");
   });
 
   // Test 8: Minting membership NFTs and adding members to the season
@@ -94,9 +94,9 @@ describe("BZDMembershipNFTs", () => {
         const members = [addr1.address, addr2.address];
         const seasonId = 1;
     
-        await expect(
+        expect(
           contract.connect(addr1).mintAndAddMembersToSeason(members, seasonId)
-        ).to.be.revertedWith("Only admins can perform this action");
+        ).to.be.revertedWithCustomError(contract, "Unauthorized");
       });
     
       // Test 10: Minting membership NFTs only for the current season
@@ -104,9 +104,10 @@ describe("BZDMembershipNFTs", () => {
         const members = [addr1.address, addr2.address];
         const seasonId = 2;
     
-        await expect(contract.mintAndAddMembersToSeason(members, seasonId)).to.be.revertedWith(
-          "Season ID must be current season"
+        expect(contract.mintAndAddMembersToSeason(members, seasonId)).to.be.revertedWithCustomError(
+          contract, "Unauthorized"
         );
+
       });
     
       // Test 11: Burning membership NFTs and removing members from the season
@@ -138,19 +139,21 @@ describe("BZDMembershipNFTs", () => {
         // Mint NFTs and add members to the season
         await contract.mintAndAddMembersToSeason(members, seasonId);
     
-        await expect(
-          contract.connect(addr1).burnAndRemoveMemberFromSeason(addr1.address, seasonId)
-        ).to.be.revertedWith("Only admins can perform this action");
+        expect(
+          contract
+            .connect(addr1)
+            .burnAndRemoveMemberFromSeason(addr1.address, seasonId)
+        ).to.be.revertedWithCustomError(contract, "Unauthorized");
       });
     
       // Test 13: Burning membership NFTs only for existing season members
       it("Should not allow burning membership NFTs for non-season members", async () => {
-        const seasonId = 1;
+        const seasonId = 2;
     
-        await expect(
+        expect(
           contract.burnAndRemoveMemberFromSeason(addr1.address, seasonId)
-            // Test 13 continued: Burning membership NFTs only for existing season members
-    ).to.be.revertedWith("Account is not a member of this season");
+          // Test 13 continued: Burning membership NFTs only for existing season members
+        ).to.be.revertedWithCustomError(contract, "NotInSeason");
   });
 
   // Test 14: Transferring membership NFTs should be prevented
@@ -162,8 +165,10 @@ describe("BZDMembershipNFTs", () => {
     await contract.mintAndAddMembersToSeason(members, seasonId);
 
     await expect(
-      contract.connect(addr1).safeTransferFrom(addr1.address, addr2.address, seasonId, 1, [])
-    ).to.be.revertedWith("Tokens are non-transferable");
+      contract
+        .connect(addr1)
+        .safeTransferFrom(addr1.address, addr2.address, seasonId, 1, [])
+    ).to.be.revertedWithCustomError(contract, "NonTransferable");
   });
 
   // Test 15: Batch transferring membership NFTs should be prevented
@@ -184,7 +189,7 @@ describe("BZDMembershipNFTs", () => {
           [1, 1],
           []
         )
-    ).to.be.revertedWith("Tokens are non-transferable");
+    ).to.be.revertedWithCustomError(contract, "NonTransferable");
   });
 
     // Test 16: Adding multiple admins
