@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import { ERC1155, ERC1155TokenReceiver } from "solmate/src/tokens/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
@@ -14,6 +14,27 @@ import "./BZDMembershipDirectory.sol";
  */
 
 contract BZDMembershipNFTs is ERC1155, Ownable {
+
+    // Custom Errors //
+    
+    error Unauthorized();
+
+    error NonTransferable();
+
+    error CannotRemoveAdmin();
+
+    error NotInSeason();
+
+    error NothingToBurn();
+
+    error LengthMismatch();
+
+    error UnsafeRecipient();
+
+    error InvalidRecipient();
+
+    // Storage //
+
     // admins directory
     BZDMembershipDirectory public admins;
 
@@ -26,7 +47,13 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
     // metadata base URI for membership NFTs
     string private _baseURI;
 
-    constructor() ERC1155("BuZhiDAO Seasonal Membership NFT") {
+    // Transferability per ID
+    // TokenID => Transferability
+    mapping(uint256 => bool) public transferable;
+
+    // Constructor //
+
+    constructor() {
         admins = new BZDMembershipDirectory();
         BZDMembershipDirectory membersDirectory = new BZDMembershipDirectory();
         membersBySeason[currentSeason] = membersDirectory;
@@ -39,10 +66,7 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      * @dev Modifier to check that the caller is an admin.
      */
     modifier onlyAdmin() {
-        require(
-            admins.isMember(msg.sender),
-            "Only admins can perform this action"
-        );
+        if (!admins.isMember(msg.sender)) revert Unauthorized();            
         _;
     }
 
@@ -69,7 +93,8 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      * @param admin The address of the admin to remove.
      */
     function removeAdmin(address admin) external onlyAdmin {
-        require(admins.memberCount() > 1, "Cannot remove last admin");
+        if (admins.memberCount() < 2) revert CannotRemoveAdmin();
+
         admins.removeMember(admin);
     }
 
@@ -112,14 +137,19 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         address[] calldata members,
         uint256 seasonId
     ) external onlyAdmin {
-        require(seasonId == currentSeason, "Season ID must be current season");
-        for (uint256 i = 0; i < members.length; i++) {
+        if (seasonId != currentSeason) revert NotInSeason();
+
+        for (uint256 i = 0; i < members.length; ) {
             address member = members[i];
             // Only mint if the recipient is not already a member of the season
             // Silent fail otherwise for convenience
             if (!membersBySeason[seasonId].isMember(member)) {
                 _mint(member, seasonId, 1, "");
                 membersBySeason[seasonId].addMember(member);
+            }
+
+            unchecked {
+                ++i;
             }
         }
     }
@@ -133,14 +163,9 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         address member,
         uint256 seasonId
     ) external onlyAdmin {
-        require(
-            membersBySeason[seasonId].isMember(member),
-            "Account is not a member of this season"
-        );
-        require(
-            membersBySeason[seasonId].memberCount() > 0,
-            "No members this season to burn"
-        );
+        if (!membersBySeason[seasonId].isMember(member)) revert NotInSeason();
+        if (membersBySeason[seasonId].memberCount() < 1) revert NothingToBurn();
+        
         _burn(member, seasonId, 1);
         membersBySeason[seasonId].removeMember(member);
     }
@@ -157,22 +182,67 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
 
     // SBT //
 
-    /**
-     * @dev Override for the ERC1155 `_beforeTokenTransfer` function to prevent transfers.
-     */
-    function _beforeTokenTransfer(
-        address operator,
+    function setTransferability(uint256 id, bool _transferable) public payable onlyAdmin {
+        transferable[id] = _transferable;
+    }
+
+    function safeTransferFrom(
         address from,
         address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual override {
-        // Prevent transferring tokens between addresses
-        require(
-            from == address(0) || to == address(0),
-            "Tokens are non-transferable"
-        );
-        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+        uint256 id,
+        uint256 amount,
+        bytes calldata data
+    ) public override {
+        if (!transferable[id]) revert NonTransferable();
+
+        this.safeTransferFrom(from, to, id, amount, data);
+    }
+
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] calldata ids,
+        uint256[] calldata amounts,
+        bytes calldata data
+    ) public override {
+        if (ids.length != amounts.length) revert LengthMismatch();
+
+        if (msg.sender != from)
+            if (!isApprovedForAll[from][msg.sender]) revert Unauthorized();
+
+        // Storing these outside the loop saves ~15 gas per iteration.
+        uint256 id;
+        uint256 amount;
+
+        for (uint256 i = 0; i < ids.length; ) {
+
+            if (!transferable[id]) revert NonTransferable();
+
+            id = ids[i];
+            amount = amounts[i];
+
+            balanceOf[from][id] -= amount;
+            balanceOf[to][id] += amount;
+
+            // An array can't have a total length
+            // larger than the max uint256 value.
+            unchecked {
+                ++i;
+            }
+        }
+
+        emit TransferBatch(msg.sender, from, to, ids, amounts);
+
+        if (to.code.length != 0) {
+            if (
+                ERC1155TokenReceiver(to).onERC1155BatchReceived(
+                    msg.sender,
+                    from,
+                    ids,
+                    amounts,
+                    data
+                ) != ERC1155TokenReceiver.onERC1155BatchReceived.selector
+            ) revert UnsafeRecipient();
+        } else if (to == address(0)) revert InvalidRecipient();
     }
 }

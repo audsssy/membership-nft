@@ -10,6 +10,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 
 contract BZDMembershipDirectory is Ownable {
+
+    // Custom Errors //
+
+    error MemberExists();
+
+    error NoSuchMember();
+
     // Public Variables //
 
     // Members count
@@ -55,8 +62,12 @@ contract BZDMembershipDirectory is Ownable {
 
     function members() public view returns (address[] memory) {
         address[] memory result = new address[](memberCount);
-        for (uint256 i = 0; i < memberCount; i++) {
+        for (uint256 i = 0; i < memberCount; ) {
             result[i] = _indexToMember[i];
+
+            unchecked {
+                ++i;
+            }
         }
         return result;
     }
@@ -67,15 +78,18 @@ contract BZDMembershipDirectory is Ownable {
      * @dev Private function to add a member to this extension's member set data structures.
      * @param member address of the member to be added to the set
      */
-    function addMember(address member) external onlyOwner {
-        require(!isMember[member], "Member already exists");
+    function addMember(address member) external payable onlyOwner {
+        if (isMember[member]) revert MemberExists();
         uint256 length = memberCount;
 
         _indexToMember[length] = member;
         _memberAddressIndex[member] = length;
         isMember[member] = true;
-        memberCount += 1;
         memberJoinedTimestamp[member] = block.timestamp;
+        
+        unchecked {
+            ++memberCount;
+        }
     }
 
     /**
@@ -84,11 +98,12 @@ contract BZDMembershipDirectory is Ownable {
      * See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/extensions/ERC721Enumerable.sol#L134
      * @param member address of the member to be removed from the set
      */
-    function removeMember(address member) external onlyOwner {
-        require(isMember[member], "Member does not exist");
+    function removeMember(address member) external payable onlyOwner {
+        if (!isMember[member]) revert NoSuchMember();
+
         // To prevent a gap in the array, we store the last member in the index of the member to delete
         // then delete the last slot (swap and pop).
-        uint256 lastMemberIndex = memberCount - 1;
+        uint256 lastMemberIndex = --memberCount;
         uint256 toBeRemovedMemberIndex = _memberAddressIndex[member];
 
         // If the member to delete is not the last member in the data structure, swap the last member with the member to delete
@@ -107,7 +122,6 @@ contract BZDMembershipDirectory is Ownable {
         delete _memberAddressIndex[member];
 
         isMember[member] = false;
-        memberCount -= 1;
         memberRemovedTimestamp[member] = block.timestamp;
     }
 }
