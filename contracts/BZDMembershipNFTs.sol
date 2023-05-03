@@ -113,6 +113,9 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      */
     function setCurrentSeason(uint256 seasonId) external onlyAdmin {
         currentSeason = seasonId;
+
+        BZDMembershipDirectory membersDirectory = new BZDMembershipDirectory();
+        membersBySeason[currentSeason] = membersDirectory;
     }
 
     // Members Management //
@@ -195,7 +198,7 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
     ) public override {
         if (!transferable[id]) revert NonTransferable();
 
-        this.safeTransferFrom(from, to, id, amount, data);
+        super.safeTransferFrom(from, to, id, amount, data);
     }
 
     function safeBatchTransferFrom(
@@ -215,11 +218,10 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         uint256 amount;
 
         for (uint256 i = 0; i < ids.length; ) {
-
-            if (!transferable[id]) revert NonTransferable();
-
             id = ids[i];
             amount = amounts[i];
+
+            if (!transferable[id]) revert NonTransferable();
 
             balanceOf[from][id] -= amount;
             balanceOf[to][id] += amount;
