@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.9;
 
-import { ERC1155, ERC1155TokenReceiver } from "solmate/src/tokens/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
@@ -27,12 +27,6 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
 
     error NothingToBurn();
 
-    error LengthMismatch();
-
-    error UnsafeRecipient();
-
-    error InvalidRecipient();
-
     // Storage //
 
     // admins directory
@@ -47,13 +41,9 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
     // metadata base URI for membership NFTs
     string private _baseURI;
 
-    // Transferability per ID
-    // TokenID => Transferability
-    mapping(uint256 => bool) public transferable;
-
     // Constructor //
 
-    constructor() {
+    constructor() ERC1155("BuZhiDAO Seasonal Membership NFT") {
         admins = new BZDMembershipDirectory();
         BZDMembershipDirectory membersDirectory = new BZDMembershipDirectory();
         membersBySeason[currentSeason] = membersDirectory;
@@ -113,11 +103,19 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      */
     function setCurrentSeason(uint256 seasonId) external onlyAdmin {
         currentSeason = seasonId;
-
-        BZDMembershipDirectory membersDirectory = new BZDMembershipDirectory();
-        membersBySeason[currentSeason] = membersDirectory;
     }
 
+    /**
+     * @dev Sets the current season.
+     * @param seasonId The ID of the current season that starts from 1
+     */
+    // function startNewMembershipDirectoryForSeason(uint256 seasonId) external onlyAdmin {
+    //     BZDMembershipDirectory membersDirectory = new BZDMembershipDirectory();
+
+    //     membersBySeason[seasonId] = membersDirectory;
+    // }
+
+        
     // Members Management //
 
     /**
@@ -185,66 +183,20 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
 
     // SBT //
 
-    function setTransferability(uint256 id, bool _transferable) public payable onlyAdmin {
-        transferable[id] = _transferable;
-    }
-
-    function safeTransferFrom(
+    /**
+     * @dev Override for the ERC1155 `_beforeTokenTransfer` function to prevent transfers.
+     */
+    function _beforeTokenTransfer(
+        address operator,
         address from,
         address to,
-        uint256 id,
-        uint256 amount,
-        bytes calldata data
-    ) public override {
-        if (!transferable[id]) revert NonTransferable();
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override {
+        // Prevent transferring tokens between addresses
+        if(from != address(0) && to != address(0)) revert NonTransferable();
 
-        super.safeTransferFrom(from, to, id, amount, data);
-    }
-
-    function safeBatchTransferFrom(
-        address from,
-        address to,
-        uint256[] calldata ids,
-        uint256[] calldata amounts,
-        bytes calldata data
-    ) public override {
-        if (ids.length != amounts.length) revert LengthMismatch();
-
-        if (msg.sender != from)
-            if (!isApprovedForAll[from][msg.sender]) revert Unauthorized();
-
-        // Storing these outside the loop saves ~15 gas per iteration.
-        uint256 id;
-        uint256 amount;
-
-        for (uint256 i = 0; i < ids.length; ) {
-            id = ids[i];
-            amount = amounts[i];
-
-            if (!transferable[id]) revert NonTransferable();
-
-            balanceOf[from][id] -= amount;
-            balanceOf[to][id] += amount;
-
-            // An array can't have a total length
-            // larger than the max uint256 value.
-            unchecked {
-                ++i;
-            }
-        }
-
-        emit TransferBatch(msg.sender, from, to, ids, amounts);
-
-        if (to.code.length != 0) {
-            if (
-                ERC1155TokenReceiver(to).onERC1155BatchReceived(
-                    msg.sender,
-                    from,
-                    ids,
-                    amounts,
-                    data
-                ) != ERC1155TokenReceiver.onERC1155BatchReceived.selector
-            ) revert UnsafeRecipient();
-        } else if (to == address(0)) revert InvalidRecipient();
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
     }
 }
