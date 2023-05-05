@@ -14,6 +14,21 @@ import "./BZDMembershipDirectory.sol";
  */
 
 contract BZDMembershipNFTs is ERC1155, Ownable {
+
+    // Custom Errors //
+    
+    error Unauthorized();
+
+    error NonTransferable();
+
+    error CannotRemoveAdmin();
+
+    error NotInSeason();
+
+    error NothingToBurn();
+
+    // Storage //
+
     // admins directory
     BZDMembershipDirectory public admins;
 
@@ -25,6 +40,8 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
 
     // metadata base URI for membership NFTs
     string private _baseURI;
+
+    // Constructor //
 
     constructor() ERC1155("BuZhiDAO Seasonal Membership NFT") {
         admins = new BZDMembershipDirectory();
@@ -39,10 +56,7 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      * @dev Modifier to check that the caller is an admin.
      */
     modifier onlyAdmin() {
-        require(
-            admins.isMember(msg.sender),
-            "Only admins can perform this action"
-        );
+        if (!admins.isMember(msg.sender)) revert Unauthorized();            
         _;
     }
 
@@ -69,7 +83,8 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      * @param admin The address of the admin to remove.
      */
     function removeAdmin(address admin) external onlyAdmin {
-        require(admins.memberCount() > 1, "Cannot remove last admin");
+        if (admins.memberCount() < 2) revert CannotRemoveAdmin();
+
         admins.removeMember(admin);
     }
 
@@ -90,6 +105,17 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         currentSeason = seasonId;
     }
 
+    /**
+     * @dev Sets the current season.
+     * @param seasonId The ID of the current season that starts from 1
+     */
+    // function startNewMembershipDirectoryForSeason(uint256 seasonId) external onlyAdmin {
+    //     BZDMembershipDirectory membersDirectory = new BZDMembershipDirectory();
+
+    //     membersBySeason[seasonId] = membersDirectory;
+    // }
+
+        
     // Members Management //
 
     /**
@@ -112,14 +138,19 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         address[] calldata members,
         uint256 seasonId
     ) external onlyAdmin {
-        require(seasonId == currentSeason, "Season ID must be current season");
-        for (uint256 i = 0; i < members.length; i++) {
+        if (seasonId != currentSeason) revert NotInSeason();
+
+        for (uint256 i = 0; i < members.length; ) {
             address member = members[i];
             // Only mint if the recipient is not already a member of the season
             // Silent fail otherwise for convenience
             if (!membersBySeason[seasonId].isMember(member)) {
                 _mint(member, seasonId, 1, "");
                 membersBySeason[seasonId].addMember(member);
+            }
+
+            unchecked {
+                ++i;
             }
         }
     }
@@ -133,14 +164,9 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         address member,
         uint256 seasonId
     ) external onlyAdmin {
-        require(
-            membersBySeason[seasonId].isMember(member),
-            "Account is not a member of this season"
-        );
-        require(
-            membersBySeason[seasonId].memberCount() > 0,
-            "No members this season to burn"
-        );
+        if (!membersBySeason[seasonId].isMember(member)) revert NotInSeason();
+        if (membersBySeason[seasonId].memberCount() < 1) revert NothingToBurn();
+        
         _burn(member, seasonId, 1);
         membersBySeason[seasonId].removeMember(member);
     }
@@ -169,10 +195,8 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         bytes memory data
     ) internal virtual override {
         // Prevent transferring tokens between addresses
-        require(
-            from == address(0) || to == address(0),
-            "Tokens are non-transferable"
-        );
+        if(from != address(0) && to != address(0)) revert NonTransferable();
+
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
     }
 }

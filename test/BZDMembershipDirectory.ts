@@ -32,7 +32,9 @@ describe("BZDMembershipDirectory", function () {
 
   it("Should not add a member that is already in the directory", async function () {
     await membershipDirectory.addMember(addr1.address);
-    await expect(membershipDirectory.addMember(addr1.address)).to.be.revertedWith("Member already exists");
+    expect(
+      membershipDirectory.addMember(addr1.address)
+    ).to.be.revertedWithCustomError(membershipDirectory, "MemberExists");
   });
 
   it("Should remove members correctly", async function () {
@@ -43,7 +45,9 @@ describe("BZDMembershipDirectory", function () {
   });
 
   it("Should not remove a member that is not in the directory", async function () {
-    await expect(membershipDirectory.removeMember(addr1.address)).to.be.revertedWith("Member does not exist");
+    expect(
+      membershipDirectory.removeMember(addr1.address)
+    ).to.be.revertedWithCustomError(membershipDirectory, "NoSuchMember");
   });
 
   it("Should return the correct member count", async function () {
