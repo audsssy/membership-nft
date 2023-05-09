@@ -24,9 +24,8 @@ contract BZDAccessList {
     /// Events
     /// -----------------------------------------------------------------------
 
-    event ListCreated(address indexed operator, uint256 id);
-    event MerkleRootSet(uint256 id, bytes32 merkleRoot);
-    event AccountListed(address indexed account, uint256 id, bool approved);
+    // event ListCreated(address indexed operator, uint256 id);
+    // event AccountListed(address indexed account, uint256 id, bool approved);
 
     /// -----------------------------------------------------------------------
     /// Errors
@@ -130,19 +129,24 @@ contract BZDAccessList {
     }
 
     /// -----------------------------------------------------------------------
-    /// Verify Logic
+    /// Getter Logic
     /// -----------------------------------------------------------------------
 
     function verify(uint256 id, address account) external view returns (bool isListed) {
         return listed[id][account];
     }
 
-    /// -----------------------------------------------------------------------
-    /// Getter Logic
-    /// -----------------------------------------------------------------------
-
     function getList(uint256 id) external view returns (address[] memory, uint256) {
         return (lists[id], lists[id].length);
+    }
+
+    /// -----------------------------------------------------------------------
+    /// Admin Logic
+    /// -----------------------------------------------------------------------
+
+    function updateContract(IBZDMembershipDirectory _admins, IBZDMembershipNFT _nft) external onlyAdmin {
+        admins = _admins;
+        nft = _nft;
     }
 
     receive() external payable {}
