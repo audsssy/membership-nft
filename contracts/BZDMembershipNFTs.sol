@@ -8,6 +8,10 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "./BZDMembershipDirectory.sol";
 
+interface IBZDAccessList {
+    function verifyAccount(uint256 id, address account) external view returns (bool isListed);
+}
+
 /**
  * @title BZDMembershipNFTs
  * @dev A contract for managing BuZhiDAO seasonal membership NFTs.
@@ -27,10 +31,19 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
 
     error NothingToBurn();
 
+    error ExistingMember();
+
     // Storage //
+
+    string public constant name = "BuZhiDAO Seasonal Membership NFT";
+    
+    string public constant symbol = "BZD NFT";
 
     // admins directory
     BZDMembershipDirectory public admins;
+
+    // access list
+    IBZDAccessList public accessList;
 
     // membership directory for each season
     mapping(uint256 => BZDMembershipDirectory) public membersBySeason;
@@ -57,6 +70,11 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
      */
     modifier onlyAdmin() {
         if (!admins.isMember(msg.sender)) revert Unauthorized();            
+        _;
+    }
+
+    modifier onlyAuthorized(uint256 id, address account) {
+        if (!accessList.verifyAccount(id, account)) revert Unauthorized();            
         _;
     }
 
@@ -131,10 +149,26 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
 
     /**
      * @dev Mints membership NFTs to the specified addresses for the current season.
-     * @param members The addresses to mint membership NFTs to.
+     * @param member The address to mint membership NFT to.
      * @param seasonId The ID of the season to mint membership NFTs for.
      */
     function mintAndAddMembersToSeason(
+        address member,
+        uint256 seasonId
+    ) external onlyAuthorized(seasonId, member) {
+        if (seasonId != currentSeason) revert NotInSeason();
+        if (membersBySeason[seasonId].isMember(member)) revert ExistingMember(); 
+
+        _mint(member, seasonId, 1, "");
+        membersBySeason[seasonId].addMember(member);
+    }
+
+     /**
+     * @dev Mints membership NFTs to the specified addresses for the current season.
+     * @param members The addresses to mint membership NFTs to.
+     * @param seasonId The ID of the season to mint membership NFTs for.
+     */
+    function mintAndAddMembersToSeasonByAdmin(
         address[] calldata members,
         uint256 seasonId
     ) external onlyAdmin {
@@ -198,5 +232,15 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         if(from != address(0) && to != address(0)) revert NonTransferable();
 
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+    }
+
+    // Admin // 
+
+    /**
+     * @dev Update associated contract address.
+     * @param _accessList The address of a BZDAccessList contract.
+     */
+    function updateContract(IBZDAccessList _accessList) external onlyAdmin {
+        accessList = _accessList;
     }
 }
