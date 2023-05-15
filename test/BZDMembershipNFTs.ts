@@ -80,7 +80,7 @@ describe("BZDMembershipNFTs", () => {
     const members = [addr1.address, addr2.address];
     const seasonId = 1;
 
-    await contract.mintAndAddMembersToSeasonByAdmin(members, seasonId);
+    await contract.mintAndAddMembersToSeason(members, seasonId);
 
     // Check if the membership NFTs were minted
     expect(await contract.balanceOf(addr1.address, seasonId)).to.equal(1);
@@ -99,7 +99,7 @@ describe("BZDMembershipNFTs", () => {
     expect(
       contract
         .connect(addr1)
-        .mintAndAddMembersToSeasonByAdmin(members, seasonId)
+        .mintAndAddMembersToSeason(members, seasonId)
     ).to.be.revertedWithCustomError(contract, "Unauthorized");
   });
 
@@ -109,7 +109,7 @@ describe("BZDMembershipNFTs", () => {
     const seasonId = 2;
 
     expect(
-      contract.mintAndAddMembersToSeasonByAdmin(members, seasonId)
+      contract.mintAndAddMembersToSeason(members, seasonId)
     ).to.be.revertedWithCustomError(contract, "Unauthorized");
   });
 
@@ -119,7 +119,7 @@ describe("BZDMembershipNFTs", () => {
     const seasonId = 1;
 
     // Mint NFTs and add members to the season
-    await contract.mintAndAddMembersToSeasonByAdmin(members, seasonId);
+    await contract.mintAndAddMembersToSeason(members, seasonId);
 
     // Burn NFTs and remove members from the season
     await contract.burnAndRemoveMemberFromSeason(addr1.address, seasonId);
@@ -140,7 +140,7 @@ describe("BZDMembershipNFTs", () => {
     const seasonId = 1;
 
     // Mint NFTs and add members to the season
-    await contract.mintAndAddMembersToSeasonByAdmin(members, seasonId);
+    await contract.mintAndAddMembersToSeason(members, seasonId);
 
     expect(
       contract
@@ -165,7 +165,7 @@ describe("BZDMembershipNFTs", () => {
     const seasonId = 1;
 
     // Mint NFTs and add members to the season
-    await contract.mintAndAddMembersToSeasonByAdmin(members, seasonId);
+    await contract.mintAndAddMembersToSeason(members, seasonId);
 
     await expect(
       contract
@@ -180,7 +180,7 @@ describe("BZDMembershipNFTs", () => {
     const seasonId = 1;
 
     // Mint NFTs and add members to the season
-    await contract.mintAndAddMembersToSeasonByAdmin(members, seasonId);
+    await contract.mintAndAddMembersToSeason(members, seasonId);
 
     await expect(
       contract
@@ -228,7 +228,7 @@ describe("BZDMembershipNFTs", () => {
 
     // Mint NFTs for new season
     const members = [addr1.address, addr3.address];
-    await contract.mintAndAddMembersToSeasonByAdmin(members, newSeason);
+    await contract.mintAndAddMembersToSeason(members, newSeason);
 
     const memberDirectoryAddress = await contract.membersBySeason(newSeason);
     const memberDirectory = await ethers.getContractAt(
