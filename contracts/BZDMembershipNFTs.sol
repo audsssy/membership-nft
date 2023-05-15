@@ -147,28 +147,12 @@ contract BZDMembershipNFTs is ERC1155, Ownable {
         return membersBySeason[seasonId].members();
     }
 
-    /**
-     * @dev Mints membership NFTs to the specified addresses for the current season.
-     * @param member The address to mint membership NFT to.
-     * @param seasonId The ID of the season to mint membership NFTs for.
-     */
-    function mintAndAddMembersToSeason(
-        address member,
-        uint256 seasonId
-    ) external onlyAuthorized(seasonId, member) {
-        if (seasonId != currentSeason) revert NotInSeason();
-        if (membersBySeason[seasonId].isMember(member)) revert ExistingMember(); 
-
-        _mint(member, seasonId, 1, "");
-        membersBySeason[seasonId].addMember(member);
-    }
-
      /**
      * @dev Mints membership NFTs to the specified addresses for the current season.
      * @param members The addresses to mint membership NFTs to.
      * @param seasonId The ID of the season to mint membership NFTs for.
      */
-    function mintAndAddMembersToSeasonByAdmin(
+    function mintAndAddMembersToSeason(
         address[] calldata members,
         uint256 seasonId
     ) external onlyAdmin {
